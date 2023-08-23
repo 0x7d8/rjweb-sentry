@@ -14,13 +14,13 @@ export const sentry = new MiddlewareBuilder<Sentry.NodeOptions>()
         headers: ctr.headers.toJSON(),
         queries: ctr.queries.toJSON(),
         fragments: ctr.fragments.toJSON(),
-        route: ctx.execute.route?.path || null,
+        route: ctx.execute.route?.path?.path?.toString() || null,
         method: ctr.url.method,
         body: ctr.rawBody || null
       })
       .setSpan(Sentry.startTransaction({
         op: ctr.type === 'http' ? 'http-request' : 'ws-upgrade',
-        name: `${ctr.type.toUpperCase()} ${ctr.url.method} ${ctr.url.href}`
+        name: `${ctr.type.toUpperCase()} ${ctr.url.method} ${ctr.ctx.execute.route?.path?.path?.toString() ?? '404'}`
       }))
       .setUser({
         ip_address: ctr.client.ip

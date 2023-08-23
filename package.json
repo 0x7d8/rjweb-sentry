@@ -1,6 +1,6 @@
 {
   "name": "@rjweb/sentry",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Easy and Lightweight Way to add sentry to rjweb-server",
   "main": "./lib/cjs/index.js",
   "module": "./lib/esm/index.js",
