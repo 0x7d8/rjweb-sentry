@@ -1,12 +1,17 @@
-import { MiddlewareBuilder } from "rjweb-server"
+import { Middleware } from "rjweb-server"
 import * as Sentry from "@sentry/node"
 
-export const sentry = new MiddlewareBuilder<Sentry.NodeOptions>()
-  .init((_, config) => {
+/** @ts-ignore */
+import { version as pckgVersion } from "./pckg.json"
+export const version: string = pckgVersion
+
+export const sentry = new Middleware<Sentry.NodeOptions, { scope: Sentry.Scope }>('@rjweb/sentry', version)
+  .load((config) => {
     Sentry.init(config)
   })
-  .http((__, _, ctr, ctx) => {
+  .httpRequest((__, _, ctx, ctr) => {
     const scope = new Sentry.Scope()
+    ctx.data(sentry).scope = scope
 
     scope
       .setLevel('log')
@@ -14,59 +19,39 @@ export const sentry = new MiddlewareBuilder<Sentry.NodeOptions>()
         headers: ctr.headers.toJSON(),
         queries: ctr.queries.toJSON(),
         fragments: ctr.fragments.toJSON(),
-        route: ctx.execute.route?.path?.path?.toString() || null,
+        route: ctx.route?.urlData.value?.toString() || null,
         method: ctr.url.method,
         body: ctr.rawBody || null
       })
       .setSpan(Sentry.startTransaction({
         op: ctr.type === 'http' ? 'http-request' : 'ws-upgrade',
-        name: `${ctr.type.toUpperCase()} ${ctr.url.method} ${ctr.ctx.execute.route?.path?.path?.toString() ?? '404'}`
+        name: `${ctr.type.toUpperCase()} ${ctr.url.method} ${ctx.route?.urlData.value?.toString() ?? '404'}`
       }))
       .setUser({
-        ip_address: ctr.client.ip
+        ip_address: ctr.client.ip.usual()
       })
 
     const transaction = scope.getTransaction()!
 
-    ctx.handleError = (err) => {
+    const handleError = ctx.handleError
+    ctx.handleError = (err, cause) => {
+      const original = handleError(err, cause)
+
       scope.setLevel('error')
       Sentry.captureException(err, scope)
 
-      ctx.error = err
-      ctx.execute.event = 'httpError'
+      return original
     }
 
-    ctx.events.listen('requestAborted', () => {
+    ctr.$abort(() => {
       transaction.setHttpStatus(ctx.response.status)
       transaction.finish()
     })
-
-    ctx.setExecuteSelf(() => {
-      transaction.setHttpStatus(ctx.response.status)
-      transaction.finish()
-      return true
-    })
-
-    ctx.setExecuteSelf = (callback) => {
-      ctx.executeSelf = async() => {
-        try {
-          const res = await Promise.resolve(callback())
-
-          transaction.setHttpStatus(ctx.response.status)
-          transaction.finish()
-
-          return res
-        } catch (err) {
-          ctx.handleError(err)
-          transaction.setHttpStatus(500)
-          transaction.finish()
-          return true
-        }
-      }
-    }
   })
-  .build()
+  .httpRequestFinish((_, __, ctx) => {
+    const transaction = ctx.data(sentry).scope.getTransaction()!
 
-/** @ts-ignore */
-import { version } from "./pckg.json"
-export const Version: string = version
+    transaction.setHttpStatus(ctx.response.status)
+    transaction.finish()
+  })
+  .export()

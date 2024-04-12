@@ -1,6 +1,6 @@
 {
   "name": "@rjweb/sentry",
-  "version": "1.0.1",
+  "version": "2.0.0",
   "description": "Easy and Lightweight Way to add sentry to rjweb-server",
   "main": "./lib/cjs/index.js",
   "module": "./lib/esm/index.js",
@@ -27,13 +27,13 @@
   },
   "homepage": "https://github.com/0x7d8/rjweb-sentry#readme",
   "dependencies": {
-    "@sentry/node": "^7.64.0",
-    "rjweb-server": "^8.0.0"
+    "@sentry/node": "^7.110.0",
+    "rjweb-server": "^9.0.5"
   },
   "devDependencies": {
-    "@rjweb/sentry": "link:.",
-    "@types/node": "^18.15.12",
-    "rjbuild-typescript": "^1.1.1",
-    "typescript": "^5.0.4"
+    "@rjweb/sentry": "link:",
+    "@types/node": "^20.12.7",
+    "rjbuild-typescript": "^1.1.2",
+    "typescript": "^5.4.5"
   }
 }
