@@ -35,7 +35,7 @@ export const sentry = new Middleware<Sentry.NodeOptions, { scope: Sentry.Scope }
 
     const handleError = ctx.handleError
     ctx.handleError = (err, cause) => {
-      const original = handleError(err, cause)
+      const original = handleError.bind(ctx)(err, cause)
 
       scope.setLevel('error')
       Sentry.captureException(err, scope)
