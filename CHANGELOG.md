@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.1.0
+
+- Add `<HttpRequestContext>.span()` to get sentry span
+- Add `<HttpRequestContext>.scope()` to get sentry scope
+- Use newer code patterns
+
 ## 2.0.1
 
 - Update Dependencies
