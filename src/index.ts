@@ -35,9 +35,9 @@ export const sentry = new Middleware<Sentry.NodeOptions, { scope: Sentry.Scope, 
     scope
       .setLevel('log')
       .setExtras({
-        headers: ctr.headers.toJSON(),
-        queries: ctr.queries.toJSON(),
-        fragments: ctr.fragments.toJSON(),
+        headers: ctr.headers.json(),
+        queries: ctr.queries.json(),
+        fragments: ctr.fragments.json(),
         route: ctx.route?.urlData.value?.toString() || null,
         method: ctr.url.method
       })
@@ -46,7 +46,7 @@ export const sentry = new Middleware<Sentry.NodeOptions, { scope: Sentry.Scope, 
       })
 
     const span = await new Promise<Sentry.Span | undefined>((resolve) => Sentry.startSpan({
-      name: `Request ${ctr.url.method} ${ctx.route?.urlData.value?.toString() ?? '404'}`,
+      name: `Request ${ctr.url.method} ${ctx.findRoute(ctr.url.method, ctr.url.path)?.urlData.value?.toString() ?? '404'}`,
       op: ctr.type === 'http' ? 'http-request' : 'ws-upgrade'
     }, (span) => resolve(span)))
 

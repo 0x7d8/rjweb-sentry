@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.1.1
+
+- Properly support newer rjweb versions
+
 ## 2.1.0
 
 - Add `<HttpRequestContext>.span()` to get sentry span

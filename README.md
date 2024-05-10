@@ -1,4 +1,4 @@
-# `rjweb-server`
+# `@rjweb/sentry`
 
 <img style="float: right;" alt="RJWEB Icon" height="104" src="https://cdn.rjns.dev/rjweb/icon.svg">
 
@@ -39,7 +39,7 @@ import { sentry } from "@rjweb/sentry"
 const server = new Server(Runtime, {
   port: 8000
 }, [
-  sentry.config({
+  sentry.use({
     environment: 'production',
     dsn: 'https://hmmm@hmmm.ingest.sentry.io/hmmm',
     tracesSampleRate: 0.1
