@@ -9,7 +9,7 @@ export class SentryHttpRequestContext extends HttpRequestContext {
   /**
    * Get the Sentry scope for the current request
    * @since 2.1.0
-   * @from @rjweb/sentry
+   * @from \@rjweb/sentry
   */ public scope(): Sentry.Scope {
     return this.context.data(sentry).scope
   }
@@ -17,7 +17,7 @@ export class SentryHttpRequestContext extends HttpRequestContext {
   /**
    * Get the Sentry span for the current request
    * @since 2.1.0
-   * @from @rjweb/sentry
+   * @from \@rjweb/sentry
   */ public span(): Sentry.Span | null {
     return this.context.data(sentry).span || null
   }
@@ -25,7 +25,10 @@ export class SentryHttpRequestContext extends HttpRequestContext {
 
 export const sentry = new Middleware<Sentry.NodeOptions, { scope: Sentry.Scope, span?: Sentry.Span }>('@rjweb/sentry', version)
   .load((config) => {
-    Sentry.init(config)
+    Sentry.init({
+      tracesSampleRate: 0.5,
+      ...config
+    })
   })
   .httpRequestContext(() => SentryHttpRequestContext)
   .httpRequest(async(__, _, ctx, ctr) => {
@@ -34,23 +37,25 @@ export const sentry = new Middleware<Sentry.NodeOptions, { scope: Sentry.Scope, 
 
     scope
       .setLevel('log')
-      .setExtras({
-        headers: ctr.headers.json(),
-        queries: ctr.queries.json(),
-        fragments: ctr.fragments.json(),
-        route: ctx.route?.urlData.value?.toString() || null,
-        method: ctr.url.method
-      })
       .setUser({
         ip_address: ctr.client.ip.usual()
       })
 
-    const span = await new Promise<Sentry.Span | undefined>((resolve) => Sentry.startSpan({
+    const span = await new Promise<Sentry.Span | undefined>((resolve) => Sentry.startSpanManual({
       name: `Request ${ctr.url.method} ${ctx.findRoute(ctr.url.method, ctr.url.path)?.urlData.value?.toString() ?? '404'}`,
       op: ctr.type === 'http' ? 'http-request' : 'ws-upgrade'
     }, (span) => resolve(span)))
 
     if (span) ctx.data(sentry).span = span
+
+    if (span) {
+      span.setAttributes({
+        headers: JSON.stringify(ctr.headers.json()),
+        queries: JSON.stringify(ctr.queries.json()),
+        fragments: JSON.stringify(ctr.fragments.json()),
+        method: ctr.url.method
+      })
+    }
 
     const handleError = ctx.handleError
     ctx.handleError = (err, cause) => {

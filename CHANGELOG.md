@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.1.2
+
+- Change default options to create spans
+- Fix some jsdocs
+
 ## 2.1.1
 
 - Properly support newer rjweb versions
