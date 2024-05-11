@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.1.3
+
+- Add ability to not measure 404 routes
+
 ## 2.1.2
 
 - Change default options to create spans

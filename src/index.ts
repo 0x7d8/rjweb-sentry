@@ -23,7 +23,7 @@ export class SentryHttpRequestContext extends HttpRequestContext {
   }
 }
 
-export const sentry = new Middleware<Sentry.NodeOptions, { scope: Sentry.Scope, span?: Sentry.Span }>('@rjweb/sentry', version)
+export const sentry = new Middleware<Sentry.NodeOptions & { span404?: boolean }, { scope: Sentry.Scope, span?: Sentry.Span }>('@rjweb/sentry', version)
   .load((config) => {
     Sentry.init({
       tracesSampleRate: 0.5,
@@ -31,7 +31,7 @@ export const sentry = new Middleware<Sentry.NodeOptions, { scope: Sentry.Scope, 
     })
   })
   .httpRequestContext(() => SentryHttpRequestContext)
-  .httpRequest(async(__, _, ctx, ctr) => {
+  .httpRequest(async({ span404 }, _, ctx, ctr) => {
     const scope = new Sentry.Scope()
     ctx.data(sentry).scope = scope
 
@@ -41,10 +41,11 @@ export const sentry = new Middleware<Sentry.NodeOptions, { scope: Sentry.Scope, 
         ip_address: ctr.client.ip.usual()
       })
 
-    const span = await new Promise<Sentry.Span | undefined>((resolve) => Sentry.startSpanManual({
-      name: `Request ${ctr.url.method} ${ctx.findRoute(ctr.url.method, ctr.url.path)?.urlData.value?.toString() ?? '404'}`,
+    const route = ctx.findRoute(ctr.url.method, ctr.url.path)
+    const span = route || span404 ? await new Promise<Sentry.Span | undefined>((resolve) => Sentry.startSpanManual({
+      name: `Request ${ctr.url.method} ${route?.urlData.value?.toString() ?? '404'}`,
       op: ctr.type === 'http' ? 'http-request' : 'ws-upgrade'
-    }, (span) => resolve(span)))
+    }, (span) => resolve(span))) : undefined
 
     if (span) ctx.data(sentry).span = span
 
