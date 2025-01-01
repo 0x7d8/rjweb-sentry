@@ -23,7 +23,7 @@ export class SentryHttpRequestContext extends HttpRequestContext {
   }
 }
 
-export const sentry = new Middleware<Sentry.NodeOptions & { span404?: boolean }, { scope: Sentry.Scope, span?: Sentry.Span }>('@rjweb/sentry', version)
+export const sentry = new Middleware<Sentry.NodeOptions & { span404?: boolean, includeBody?: boolean }, { scope: Sentry.Scope, span?: Sentry.Span }>('@rjweb/sentry', version)
   .load((config) => {
     Sentry.init({
       tracesSampleRate: 0.5,
@@ -31,7 +31,7 @@ export const sentry = new Middleware<Sentry.NodeOptions & { span404?: boolean },
     })
   })
   .httpRequestContext(() => SentryHttpRequestContext)
-  .httpRequest(async({ span404 }, _, ctx, ctr) => {
+  .httpRequest(async({ span404, includeBody }, _, ctx, ctr) => {
     const scope = new Sentry.Scope()
     ctx.data(sentry).scope = scope
 
@@ -44,18 +44,20 @@ export const sentry = new Middleware<Sentry.NodeOptions & { span404?: boolean },
     const route = ctx.findRoute(ctr.url.method, ctr.url.path)
     const span = route || span404 ? await new Promise<Sentry.Span | undefined>((resolve) => Sentry.startSpanManual({
       name: `Request ${ctr.url.method} ${route?.urlData.value?.toString() ?? '404'}`,
-      op: ctr.type === 'http' ? 'http-request' : 'ws-upgrade'
+      op: ctr.type === 'http' ? 'http.server' :  'ws.server',
     }, (span) => resolve(span))) : undefined
 
     if (span) ctx.data(sentry).span = span
 
     if (span) {
-      span.setAttributes({
-        headers: JSON.stringify(ctr.headers.json()),
-        queries: JSON.stringify(ctr.queries.json()),
-        fragments: JSON.stringify(ctr.fragments.json()),
-        method: ctr.url.method
-      })
+      span.setAttribute('headers', JSON.stringify(ctr.headers.json()))
+      span.setAttribute('queries', JSON.stringify(ctr.queries.json()))
+      span.setAttribute('fragments', JSON.stringify(ctr.fragments.json()))
+      span.setAttribute('method', ctr.url.method)
+
+      if (includeBody) {
+        span.setAttribute('body', await ctr.$body().text())
+      }
     }
 
     const handleError = ctx.handleError
