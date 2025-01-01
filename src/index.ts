@@ -53,11 +53,8 @@ export const sentry = new Middleware<Sentry.NodeOptions & { span404?: boolean, i
       span.setAttribute('headers', JSON.stringify(ctr.headers.json()))
       span.setAttribute('queries', JSON.stringify(ctr.queries.json()))
       span.setAttribute('fragments', JSON.stringify(ctr.fragments.json()))
+      span.setAttribute('params', JSON.stringify(ctr.params.json()))
       span.setAttribute('method', ctr.url.method)
-
-      if (includeBody) {
-        span.setAttribute('body', await ctr.$body().text())
-      }
     }
 
     const handleError = ctx.handleError
@@ -71,14 +68,18 @@ export const sentry = new Middleware<Sentry.NodeOptions & { span404?: boolean, i
     }
 
     if (span) ctr.$abort(() => {
+      if (includeBody && ctx.body.raw) span.setAttribute('body', ctx.body.raw.toString())
+
       Sentry.setHttpStatus(span, ctx.response.status)
       span.end()
     })
   })
-  .httpRequestFinish((_, __, ctx) => {
+  .httpRequestFinish(async({ includeBody }, __, ctx) => {
     const span = ctx.data(sentry).span
 
     if (span) {
+      if (includeBody && ctx.body.raw) span.setAttribute('body', ctx.body.raw.toString())
+
       Sentry.setHttpStatus(span, ctx.response.status)
       span.end()
     }
